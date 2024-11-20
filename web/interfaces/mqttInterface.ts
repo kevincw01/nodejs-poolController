@@ -404,13 +404,43 @@ export class MqttInterfaceBindings extends BaseInterfaceBindings {
                 // RKS: Not sure why there is no processing of state vs config here.  Right now the topics are unique
                 // between them so it doesn't matter but it will become an issue.
                 switch (topics[topics.length - 1].toLowerCase()) {
-						case 'setstate': {
-						let id = parseInt(msg.id, 10);
+                    case 'setstate': {
+                        let id = parseInt(msg.id, 10);
                         if (typeof id !== 'undefined' && isNaN(id)) {
                             logger.error(`Inbound MQTT ${topics} has an invalid id (${id}) in the message (${msg}).`)
                         };
                         let isOn = typeof msg.isOn !== 'undefined' ? utils.makeBool(msg.isOn) : typeof msg.state !== 'undefined' ? utils.makeBool(msg.state) : undefined;
                         switch (topics[topics.length - 2].toLowerCase()) {
+                            case 'panel': {
+                                if(typeof msg.mode !== 'undefined') {
+                                    switch(msg.mode.toLowerCase()) {
+                                        case 'auto': {
+                                            try { await sys.board.system.setPanelModeAsync({ mode: 'auto' }); }
+                                            catch (err) { logger.error(`Invalid setState panel auto MQTT message (${Utils.stringifyJSON(msg)}).`); }
+                                            break;
+                                        }
+                                        case 'service': {
+                                            try { await sys.board.system.setPanelModeAsync({ mode: 'service' }); }
+                                            catch (err) { logger.error(`Invalid setState panel service MQTT message (${Utils.stringifyJSON(msg)}).`); }
+                                            break;
+                                        }
+                                        case 'timeout': {
+                                            if(typeof msg.timeout !== 'undefined' && isNaN(msg.timeout)) {
+                                                logger.error(`Invalid timeout value for SetState panel timeout MQTT message (${Utils.stringifyJSON(msg)}).`);
+                                            } else {
+                                                try { 
+                                                    await sys.board.system.setPanelModeAsync({ mode: 'timeout', timeout: `${msg.timeout}` }); }
+                                                catch (err) { logger.error(`Error processing setpanel timeout MQTT: ${err.message}`); }
+                                            }
+                                            break;
+                                        }
+                                        default:
+                                            logger.warn(`MQTT: Inbound topic setstate panel not matched to mode (${Utils.stringifyJSON(msg)}).`);
+                                    }
+                                } else {
+                                    logger.error(`Invalid setState panel timeout MQTT message (${Utils.stringifyJSON(msg)}).`);
+                                }
+                            }
                             case 'circuits':
                             case 'circuit': {
                                 try {
@@ -474,8 +504,8 @@ export class MqttInterfaceBindings extends BaseInterfaceBindings {
                             }
                             break;
                         }
-					case 'pump':
-						{
+                    case 'pump':
+                        {
                             let id = parseInt(msg.id, 10);
                             if (typeof id !== 'undefined' && isNaN(id)) {  
                                 logger.error(`Inbound MQTT ${topics} has an invalid id (${id}) in the message (${Utils.stringifyJSON(msg)}).`)
@@ -496,7 +526,7 @@ export class MqttInterfaceBindings extends BaseInterfaceBindings {
                                                 if(typeof units !== 'undefined') {
                                                     let val = parseInt(ckt.units.val,10);
                                                     if(typeof val !== 'undefined' && isNaN(val)) {
-                                                        logger.error(`Inbound pump config MQTT ${topics} invalid circuits.units.val (${circuits.units.val}) in the message (${Utils.stringifyJSON(msg)}).`);
+                                                        logger.error(`Inbound pump config MQTT ${topics} invalid circuits.units.val (${circuits.units.val}) in the message .`);
                                                         return;
                                                     } else {
                                                         //validated a circuit is well formed

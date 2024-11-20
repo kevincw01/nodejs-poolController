@@ -613,6 +613,8 @@ export class NixieSystemCommands extends SystemCommands {
                 state.mode = 0;
                 webApp.emitToClients('panelMode', { mode: mode, remaining: 0 });
                 break;
+            case 'default':
+                logger.error(`Invalid selPanelModeAsync option: ${mode.name}`);
         }
     }
     private checkServiceTimeout(mode: any, start: number, timeout: number, interval?: number) {
